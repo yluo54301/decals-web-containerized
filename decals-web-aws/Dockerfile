@@ -1,29 +1,58 @@
-FROM python:3.6-buster
+# DR11 AWS viewer ("lite", Elastic Beanstalk) -- single container: nginx -> uwsgi -> Django (imagine).
+#
+# Modernized 2026-06 for DR11. The old image (python:3.6-buster + hand-built intel-numpy +
+# astrometry 0.84 / tractor dr9.5) predated DR10/DR11. We now build on Dustin Lang's current
+# recipe (imagine docker/spin/Dockerfile), which bakes the full scientific stack
+# (astrometry.net, tractor, legacypipe, numpy/scipy/astropy/fitsio) into the base image.
+# Only the lightweight web layer is pip-installed here.
+#
+# NOTE: pin the base tag to whatever the DR11 render image used; DR10.3.7b is the current
+# legacypipe release image. Bump if a newer DR11-specific tag exists.
+FROM legacysurvey/legacypipe:DR10.3.7b
 
 SHELL ["/bin/bash", "-c"]
+
+# Web-server layer. The AWS "lite" deployment runs nginx and uwsgi together in one container
+# (the Spin deployment splits nginx into its own container instead).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends nginx curl git && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Python web dependencies only (heavy science deps come from the base image).
+RUN for x in \
+      Django \
+      pillow \
+      psutil \
+      psycopg2-binary \
+      uwsgi \
+      requests \
+      tzdata \
+      numba \
+      bokeh \
+    ; do \
+      python3 -m pip install --no-cache-dir --break-system-packages "$x"; \
+    done
+
+# legacypipe/tractor/astrometry are installed under /usr/local/lib/python in the base image.
+ENV PYTHONPATH=/usr/local/lib/python
+
 WORKDIR /app
 
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y build-essential curl git swig libpcre3 libpcre3-dev nginx
+# Catalog helper files the viewer loads at runtime (SGA ellipses + Tycho-2).
+# Done before COPY so the data dir exists; COPY does not delete these.
+RUN mkdir -p /app/decals-web/data/sga && \
+    curl -fSL -o /app/decals-web/data/sga/SGA-ellipse-v3.2-cut.kd.fits \
+        https://portal.nersc.gov/project/cosmo/temp/dstn/SGA-ellipse-v3.2-cut.kd.fits && \
+    curl -fSL -o /app/decals-web/data/tycho2-sub.kd.fits \
+        https://portal.nersc.gov/project/cosmo/temp/dstn/tycho2-sub.kd.fits
 
-COPY requirements.txt /app/
-# We must install intel-numpy first, because otherwise pip does not realize it provides 'numpy'
-# and it will install regular numpy as well as intel-numpy, and problems will result
-# (eg with fitsio).  intel-numpy is a requirement of mkl-fft.
-RUN pip install --no-cache-dir intel-numpy
-RUN pip install --no-cache-dir -r requirements.txt
+# App code (this directory: entry.sh, viewer.conf, uwsgi_params, and the decals-web submodule).
+COPY . /app
 
-RUN mkdir -p decals-web/data/sga && \
-    curl -o decals-web/data/sga/SGA-ellipse-v3.2-cut.kd.fits https://portal.nersc.gov/project/cosmo/temp/dstn/SGA-ellipse-v3.2-cut.kd.fits && \
-    curl -o decals-web/data/tycho2-sub.kd.fits https://portal.nersc.gov/project/cosmo/temp/dstn/tycho2-sub.kd.fits
-
-COPY . /app    
-
-RUN ln -s /app/viewer.conf /etc/nginx/sites-enabled && \
-    rm /etc/nginx/sites-enabled/default
+# nginx site config (proxies / -> uwsgi at 127.0.0.1:3032, serves /static).
+RUN ln -sf /app/viewer.conf /etc/nginx/sites-enabled/ && \
+    rm -f /etc/nginx/sites-enabled/default
 
 EXPOSE 80
 
 ENTRYPOINT ["/app/entry.sh"]
-#CMD ["python3", "decals-web/manage.py", "runserver", "0.0.0.0:8000"]
