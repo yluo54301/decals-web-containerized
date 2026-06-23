@@ -33,8 +33,11 @@ RUN for x in \
       python3 -m pip install --no-cache-dir --break-system-packages "$x"; \
     done
 
-# legacypipe/tractor/astrometry are installed under /usr/local/lib/python in the base image.
-ENV PYTHONPATH=/usr/local/lib/python
+# Do NOT override PYTHONPATH here. The base image sets it to include the legacypipe
+# source checkout at /src/legacypipe/py (plus /src/unwise_psf/py, /usr/local/lib/python,
+# /src/imagine). entry.sh prepends /app/decals-web to whatever the base defines.
+# (A hardcoded "ENV PYTHONPATH=/usr/local/lib/python" here clobbered that and caused
+# "No module named legacypipe".)
 
 WORKDIR /app
 
