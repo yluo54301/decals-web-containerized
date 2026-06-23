@@ -36,6 +36,11 @@ RUN for x in \
 # legacypipe/tractor/astrometry are installed under /usr/local/lib/python in the base image.
 ENV PYTHONPATH=/usr/local/lib/python
 
+# Select the AWS "lite" dev settings (dev.viewer.legacysurvey.org, ENABLE_DR11).
+# wsgi.py/manage.py setdefault to viewer.settings (which does not exist in the repo);
+# this overrides that without needing to copy settings_pr_dev.py to settings.py.
+ENV DJANGO_SETTINGS_MODULE=viewer.settings_pr_dev
+
 WORKDIR /app
 
 # Catalog helper files the viewer loads at runtime (SGA ellipses + Tycho-2).
