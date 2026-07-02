@@ -43,8 +43,10 @@ WORKDIR /app
 
 # Catalog helper files the viewer loads at runtime (SGA ellipses + Tycho-2).
 # Done before COPY so the data dir exists; COPY does not delete these.
+# NOTE: cat_sga2020_ellipse() reads data/sga/SGA-2020.kd.fits, so save the download
+# under that name (the portal file v3.2-cut IS the SGA-2020 ellipse cut).
 RUN mkdir -p /app/decals-web/data/sga && \
-    curl -fSL -o /app/decals-web/data/sga/SGA-ellipse-v3.2-cut.kd.fits \
+    curl -fSL -o /app/decals-web/data/sga/SGA-2020.kd.fits \
         https://portal.nersc.gov/project/cosmo/temp/dstn/SGA-ellipse-v3.2-cut.kd.fits && \
     curl -fSL -o /app/decals-web/data/tycho2-sub.kd.fits \
         https://portal.nersc.gov/project/cosmo/temp/dstn/tycho2-sub.kd.fits
