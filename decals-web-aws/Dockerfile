@@ -51,17 +51,12 @@ RUN mkdir -p /app/decals-web/data/sga && \
     curl -fSL -o /app/decals-web/data/tycho2-sub.kd.fits \
         https://portal.nersc.gov/project/cosmo/temp/dstn/tycho2-sub.kd.fits
 
-# DESI EDR/DR1 redshift catalogs (spectra overlays) + SGA2025 parent catalog.
+# DESI DR1 redshift catalog (spectra overlay) + SGA2025 parent catalog.
 # Staged from viewer-dev/data on NERSC (portal temp/yifei). The DR1 catalog is
 # 3.3 GB, which is most of this image's size -- the EB instance needs a root
 # volume large enough for the pull (>= 30 GB recommended).
-RUN mkdir -p /app/decals-web/data/desi-spectro-edr \
-             /app/decals-web/data/desi-spectro-dr1 \
+RUN mkdir -p /app/decals-web/data/desi-spectro-dr1 \
              /app/decals-web/data/sga2025 && \
-    curl -fSL -o /app/decals-web/data/desi-spectro-edr/zpix-all.kd.fits \
-        https://portal.nersc.gov/project/cosmo/temp/yifei/desi-spectro-edr-zpix-all.kd.fits && \
-    curl -fSL -o /app/decals-web/data/desi-spectro-edr/tile-clusters.json \
-        https://portal.nersc.gov/project/cosmo/temp/yifei/desi-spectro-edr-tile-clusters.json && \
     curl -fSL -o /app/decals-web/data/desi-spectro-dr1/zpix-all.kd.fits \
         https://portal.nersc.gov/project/cosmo/temp/yifei/desi-spectro-dr1-zpix-all.kd.fits && \
     curl -fSL -o /app/decals-web/data/sga2025/SGA2025-parent-latest.kd.fits \
